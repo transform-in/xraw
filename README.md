@@ -26,67 +26,67 @@ Raw Query ORM is a Query Builder as light as raw query and as easy as ORM
 # Benchmarking vs Other ORMs
 source : https://github.com/kihamo/orm-benchmark
 
-command : ``` orm-benchmark -orm=xorm,xraw (-multi=1 default) ```
+command : ``` orm-benchmark -orm=all (-multi=1 default) ```
 
 ```bash
 Reports: 
 
   2000 times - Insert
-       raw:     1.97s       984686 ns/op     568 B/op     14 allocs/op
-      xraw:     2.90s      1451076 ns/op     480 B/op      7 allocs/op
-      xorm:     3.51s      1753535 ns/op    2584 B/op     69 allocs/op
+ ---  xraw:     2.07s      1034107 ns/op     480 B/op      7 allocs/op ---
+       orm:     2.61s      1307297 ns/op    1433 B/op     37 allocs/op
+       raw:     2.79s      1397290 ns/op     568 B/op     14 allocs/op
+       qbs:     3.12s      1562002 ns/op    4319 B/op    105 allocs/op
+      gorp:     3.82s      1909134 ns/op    1405 B/op     31 allocs/op
+      hood:     3.98s      1991849 ns/op   10736 B/op    156 allocs/op
+      xorm:     4.18s      2091037 ns/op    2584 B/op     69 allocs/op
+      modl:     4.47s      2232501 ns/op    1333 B/op     30 allocs/op
+      gorm:     5.70s      2851877 ns/op    7717 B/op    150 allocs/op
 
    500 times - MultiInsert 100 row
-      xraw:     1.17s      2333593 ns/op   42711 B/op    205 allocs/op
-       raw:     1.91s      3817893 ns/op  110983 B/op   1110 allocs/op
-      xorm:     2.05s      4103739 ns/op  230517 B/op   4962 allocs/op
+  --- xraw:     1.00s      1991180 ns/op   42711 B/op    205 allocs/op ---
+       orm:     1.21s      2428474 ns/op  104592 B/op   1629 allocs/op
+       raw:     1.91s      3824940 ns/op  110983 B/op   1110 allocs/op
+      xorm:     2.78s      5566887 ns/op  230481 B/op   4962 allocs/op
+      gorp:     Not support multi insert
+      hood:     Not support multi insert
+       qbs:     Not support multi insert
+      modl:     Not support multi insert
+      gorm:     Not support multi insert
 
   2000 times - Update
-      xraw:     1.10s       550760 ns/op     288 B/op      5 allocs/op
-       raw:     1.11s       554043 ns/op     632 B/op     16 allocs/op
-      xorm:     2.25s      1122649 ns/op    2897 B/op    107 allocs/op
+       raw:     1.08s       541486 ns/op     632 B/op     16 allocs/op
+       orm:     1.12s       559463 ns/op    1392 B/op     38 allocs/op
+---   xraw:     1.35s       675182 ns/op     288 B/op      5 allocs/op ---
+      gorp:     2.55s      1273046 ns/op    1552 B/op     37 allocs/op
+      xorm:     2.61s      1305718 ns/op    2896 B/op    107 allocs/op
+      modl:     2.81s      1405387 ns/op    1504 B/op     38 allocs/op
+       qbs:     3.77s      1882914 ns/op    4313 B/op    105 allocs/op
+      hood:     6.14s      3068596 ns/op   10731 B/op    156 allocs/op
+      gorm:     8.30s      4150627 ns/op   18622 B/op    385 allocs/op
 
   4000 times - Read
-       raw:     2.04s       510274 ns/op    1432 B/op     37 allocs/op
-      xraw:     4.24s      1059379 ns/op    1793 B/op     40 allocs/op
-      xorm:     5.85s      1462664 ns/op    9981 B/op    267 allocs/op
+       orm:     2.28s       570828 ns/op    2640 B/op     95 allocs/op
+       raw:     2.53s       632325 ns/op    1432 B/op     37 allocs/op
+       qbs:     2.89s       721450 ns/op    6360 B/op    176 allocs/op
+ ---  xraw:     4.67s      1167800 ns/op    1792 B/op     40 allocs/op ---
+      hood:     5.11s      1277683 ns/op    4016 B/op     48 allocs/op
+      xorm:     5.43s      1358713 ns/op    9981 B/op    267 allocs/op
+      modl:     5.58s      1394672 ns/op    1873 B/op     45 allocs/op
+      gorp:     5.59s      1396913 ns/op    1872 B/op     52 allocs/op
+      gorm:     5.99s      1496423 ns/op   12156 B/op    239 allocs/op
 
   2000 times - MultiRead limit 100
-       raw:     1.47s       734600 ns/op   34704 B/op   1320 allocs/op
-      xraw:     2.90s      1452457 ns/op   40440 B/op   1536 allocs/op
-      xorm:     4.11s      2052743 ns/op  178377 B/op   7890 allocs/op
+      modl:     1.76s       878631 ns/op   49864 B/op   1721 allocs/op
+       raw:     1.76s       881717 ns/op   34704 B/op   1320 allocs/op
+       orm:     1.92s       961051 ns/op   88198 B/op   4483 allocs/op
+      gorp:     2.15s      1072788 ns/op   63673 B/op   1909 allocs/op
+       qbs:     2.21s      1104192 ns/op  165632 B/op   6428 allocs/op
+---   xraw:     3.04s      1520843 ns/op   40440 B/op   1536 allocs/op ---
+      hood:     4.44s      2217598 ns/op  136053 B/op   6358 allocs/op
+      xorm:     4.86s      2430348 ns/op  178372 B/op   7890 allocs/op
+      gorm:     5.31s      2654807 ns/op  255421 B/op   6225 allocs/op
 ```
 
-command: ``` orm-benchmark -orm=xorm,xraw,raw -multi=10 ```
-
-```
-Reports: 
-
- 20000 times - Insert
-       raw:    22.77s      1138388 ns/op     568 B/op     14 allocs/op
-      xraw:    23.99s      1199305 ns/op     480 B/op      7 allocs/op
-      xorm:    38.69s      1934604 ns/op    2577 B/op     69 allocs/op
-
-  5000 times - MultiInsert 100 row
-      xraw:    13.06s      2612550 ns/op   42632 B/op    205 allocs/op
-       raw:    20.18s      4035083 ns/op  110905 B/op   1110 allocs/op
-      xorm:    23.67s      4733712 ns/op  230398 B/op   4962 allocs/op
-
- 20000 times - Update
-       raw:    11.58s       579139 ns/op     632 B/op     16 allocs/op
-      xraw:    12.02s       601225 ns/op     288 B/op      5 allocs/op
-      xorm:    25.18s      1258879 ns/op    2896 B/op    107 allocs/op
-
- 40000 times - Read
-       raw:    26.16s       654035 ns/op    1432 B/op     37 allocs/op
-      xraw:    51.59s      1289778 ns/op    1792 B/op     40 allocs/op
-      xorm:    56.53s      1413237 ns/op    9978 B/op    267 allocs/op
-
- 20000 times - MultiRead limit 100
-       raw:    15.03s       751372 ns/op   34705 B/op   1320 allocs/op
-      xraw:    32.58s      1629140 ns/op   40440 B/op   1536 allocs/op
-      xorm:    41.83s      2091260 ns/op  178378 B/op   7890 allocs/op
-```
 # Support Database
 | No   | Database   |
 | :--- | :--------- |
