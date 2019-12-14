@@ -11,6 +11,7 @@ import (
 	"github.com/radityaapratamaa/xraw/constants"
 	"github.com/radityaapratamaa/xraw/lib"
 )
+
 func (re *Engine) Insert(data interface{}) (int64, error) {
 	defer re.clearField()
 
@@ -57,7 +58,8 @@ func (re *Engine) Delete(data interface{}) (int64, error) {
 
 func (re *Engine) isSoftDelete(dt interface{}) (bool, error) {
 	fieldElem := reflect.ValueOf(dt).Elem()
-	for x := 0; x < fieldElem.NumField(); x++ {
+	numField := fieldElem.NumField()
+	for x := 0; x < numField; x++ {
 		identifierTag := fieldElem.Type().Field(x).Tag.Get("xraw")
 		if err := re.checkAndSetAutoColumn(identifierTag, fieldElem, "delete"); err != nil {
 			return false, err
@@ -144,7 +146,8 @@ func (re *Engine) Cols(col string, otherCols ...string) XrawEngine {
 }
 func (re *Engine) PrepareMultiInsert(ctx context.Context, data interface{}) error {
 	sdValue := reflect.ValueOf(data).Elem()
-	if sdValue.Len() == 0 {
+	sdValLen := sdValue.Len()
+	if sdValLen == 0 {
 		return errors.New("Data must be filled")
 	}
 	firstVal := sdValue.Index(0)
@@ -162,7 +165,8 @@ func (re *Engine) PrepareMultiInsert(ctx context.Context, data interface{}) erro
 
 	cols := "("
 	val := cols
-	for x := 0; x < firstVal.NumField(); x++ {
+	numField := firstVal.NumField()
+	for x := 0; x < numField; x++ {
 		colName, valid := re.getAndValidateTag(firstVal, x)
 		if !valid {
 			continue
@@ -177,12 +181,13 @@ func (re *Engine) PrepareMultiInsert(ctx context.Context, data interface{}) erro
 	val = val[:len(val)-1]
 	cols += ")"
 	val += ")"
-	re.column = cols + " VALUES " + strings.Repeat(val+",", sdValue.Len()-1) + val
+	re.column = cols + " VALUES " + strings.Repeat(val+",", sdValLen-1) + val
 	re.rawQuery = "INSERT INTO " + tableName + " " + re.column
 	re.rawQuery = re.db.Rebind(re.rawQuery)
-	for x := 1; x < sdValue.Len(); x++ {
+	for x := 1; x < sdValLen; x++ {
 		tmpVal := sdValue.Index(x).Elem()
-		for z := 0; z < tmpVal.NumField(); z++ {
+		tmpValNumField := tmpVal.NumField()
+		for z := 0; z < tmpValNumField; z++ {
 			fieldType := tmpVal.Type().Field(z)
 			fieldValue := tmpVal.Field(z)
 			if _, valid := re.checkStructTag(fieldType.Tag, fieldValue); !valid {
@@ -208,7 +213,8 @@ func (re *Engine) preparedData(command string, data interface{}) {
 		values = ""
 	}
 	var valid bool
-	for x := 0; x < sdValue.NumField(); x++ {
+	numField := sdValue.NumField()
+	for x := 0; x < numField; x++ {
 		col := ""
 		if col, valid = re.getAndValidateTag(sdValue, x); !valid {
 			continue

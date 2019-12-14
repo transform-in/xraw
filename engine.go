@@ -133,16 +133,18 @@ func (re *Engine) extractTableName(data interface{}) reflect.Value {
 	if dValue.Kind() == reflect.Slice {
 		re.isMultiRows = true
 		re.multiPreparedValue = nil
-		for i := 0; i < dValue.Len(); i++ {
+		dValLen := dValue.Len()
+		for i := 0; i < dValLen; i++ {
 			sdValue = dValue.Index(i)
 			re.preparedValue = nil
-			if i == dValue.Len()-1 {
+			if i == dValLen-1 {
 				break
 			}
 			if sdValue.Kind() == reflect.Ptr {
 				sdValue = sdValue.Elem()
 			}
-			for x := 0; x < sdValue.NumField(); x++ {
+			sdValNumField := sdValue.NumField()
+			for x := 0; x < sdValNumField; x++ {
 				if _, valid := re.getAndValidateTag(sdValue, x); !valid {
 					continue
 				}
