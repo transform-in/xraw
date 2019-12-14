@@ -108,7 +108,9 @@ func generateConnectionString(cfg *DbConfig) (connectionString string, err error
 			dbURL.Host = cfg.Host + ":" + cfg.Port
 		}
 		replacedStr := "@" + cfg.Protocol + "($1:$2)/"
-
+		if dbURL.RawQuery == "" {
+			dbURL.RawQuery += "parseTime=true"
+		}
 		rgx := regexp.MustCompile(`@([a-zA-Z0-9]+):([0-9]+)/`)
 		res := rgx.ReplaceAllString(dbURL.String(), replacedStr)
 		res = res[8:]
@@ -129,6 +131,9 @@ func generateConnectionString(cfg *DbConfig) (connectionString string, err error
 func (re *Engine) extractTableName(data interface{}) reflect.Value {
 	dValue := reflect.ValueOf(data).Elem()
 
+	if re.tableName != "" {
+		return dValue
+	}
 	sdValue := dValue
 	if dValue.Kind() == reflect.Slice {
 		re.isMultiRows = true
@@ -192,6 +197,7 @@ func (re *Engine) clearField() {
 	re.isRaw = false
 	re.isBulk = false
 	re.isMultiRows = false
+	re.includeDeletedColumn = false
 	re.preparedValue = nil
 	re.multiPreparedValue = nil
 	re.counter = 0
