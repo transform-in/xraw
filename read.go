@@ -61,6 +61,11 @@ func (re *Engine) SelectMax(col string, colAlias ...string) XrawEngine {
 	return re
 }
 
+func (re *Engine) Unscoped() XrawEngine {
+	re.includeDeletedColumn = true
+	return re
+}
+
 func (re *Engine) SelectMin(col string, colAlias ...string) XrawEngine {
 	re.aggregateFuncSelect("MIN", col, colAlias...)
 
@@ -226,7 +231,7 @@ func (re *Engine) generateCondition(col string, nValue interface{}, opt string, 
 			re.condition += " AND "
 		}
 	}
-	re.condition += col + " " + opt + " "
+	re.condition += re.syntaxQuote + col + re.syntaxQuote + " " + opt + " "
 	// fmt.Println("opt " + opt)
 	iValue := reflect.ValueOf(nValue)
 	value := ""
@@ -311,12 +316,19 @@ func (re *Engine) GenerateSelectQuery() {
 		re.rawQuery += " FROM "
 		re.rawQuery += re.syntaxQuote + re.tableName + re.syntaxQuote
 
+		nullQuery := "NULL"
+		if re.includeDeletedColumn {
+			nullQuery = "NOT NULL"
+		}
+
+		re.rawQuery += " WHERE "
 		if re.condition != "" {
 			// Convert the Condition Value into the prepared Statement Condition
 			re.convertToPreparedCondition()
-			re.rawQuery += " WHERE "
-			re.rawQuery += re.condition
+			re.condition += "AND "
 		}
+		re.condition += re.syntaxQuote + "deleted_at" + re.syntaxQuote + " IS " + nullQuery
+		re.rawQuery += re.condition
 
 		if re.groupBy != "" {
 			re.rawQuery += " GROUP BY "
