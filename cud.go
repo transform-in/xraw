@@ -14,7 +14,7 @@ import (
 
 func (re *Engine) Insert(data interface{}) (int64, error) {
 	defer re.clearField()
-
+	re.command = "created"
 	// ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	// defer cancel()
 	ctx := context.Background()
@@ -29,6 +29,7 @@ func (re *Engine) Update(data interface{}) (int64, error) {
 	defer re.clearField()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
+	re.command = "updated"
 	if err := re.PrepareData(ctx, "UPDATE", data); err != nil {
 		return 0, err
 	}
@@ -43,6 +44,7 @@ func (re *Engine) Delete(data interface{}) (int64, error) {
 	if err := lib.CheckDataKind(dVal, false); err != nil {
 		return 0, err
 	}
+	re.command = "deleted"
 	if valid, err := re.isSoftDelete(data); valid && err == nil {
 		return re.Cols("deleted_at").Update(data)
 	} else if err != nil {
@@ -73,29 +75,27 @@ func (re *Engine) checkAndSetAutoColumn(identifierTag string, fieldElem reflect.
 	switch identifierTag {
 	case "deleted":
 		if err = re.setAutoUpdateCol(fieldElem, "DeletedAt"); (err == nil) && (command == "delete") {
-			log.Println("set deleted at")
 			return nil
 		}
 
 	case "created":
 		if err = re.setAutoUpdateCol(fieldElem, "CreatedAt"); (err == nil) && (command == "insert") {
-			log.Println("set created at")
 			return nil
 		}
 	case "updated":
 		if err = re.setAutoUpdateCol(fieldElem, "UpdatedAt"); (err == nil) && (command == "update") {
-			log.Println("set updated at")
+			re.updatedCol["updated_at"] = true
 			return nil
 		}
 	}
 	return err
 }
 
-func (re *Engine) setAutoUpdateCol(fieldElem reflect.Value, colName string) error {
+func (re *Engine) setAutoUpdateCol(structReflect reflect.Value, colName string) error {
 	action := strings.ToLower(colName[:len(colName)-2])
-	field := fieldElem.FieldByName(colName)
+	field := structReflect.FieldByName(colName)
 	if !field.IsValid() {
-		return errors.New("Struct field name must be '" + colName + "' if it has a tag xraw '" + action + "'")
+		return errors.New("Struct must have created field and field name must be '" + colName + "' if it has a tag xraw '" + action + "'")
 	}
 
 	if field.CanSet() && strings.Contains(field.Type().String(), "time.Time") {
@@ -103,10 +103,10 @@ func (re *Engine) setAutoUpdateCol(fieldElem reflect.Value, colName string) erro
 		currTimeReflectValue := reflect.ValueOf(currentTime)
 		if field.Type().Kind() == reflect.Ptr {
 			currTimeReflectValue = reflect.ValueOf(&currentTime)
-		} else {
-			return errors.New("Field '" + colName + "' must be time.Time data type")
 		}
 		field.Set(currTimeReflectValue)
+	} else {
+		return errors.New("Field '" + colName + "' must be 'time.Time' data type")
 	}
 	return nil
 }
@@ -122,8 +122,8 @@ func (re *Engine) PrepareData(ctx context.Context, command string, data interfac
 		return err
 	}
 	if dVal.Elem().Kind() == reflect.Slice {
-		re.PrepareMultiInsert(ctx, data)
-		return nil
+		return re.PrepareMultiInsert(ctx, data)
+
 	}
 	re.preparedData(command, data)
 	re.GenerateRawCUDQuery(command, data)
@@ -171,10 +171,20 @@ func (re *Engine) PrepareMultiInsert(ctx context.Context, data interface{}) erro
 		if !valid {
 			continue
 		}
+
 		fieldValue := firstVal.Field(x)
 		cols += re.syntaxQuote + colName + re.syntaxQuote + ","
 		val += "?,"
 
+		re.preparedValue = append(re.preparedValue, fieldValue.Interface())
+	}
+	fieldCreatedName := "CreatedAt"
+	if err := re.setAutoUpdateCol(firstVal, fieldCreatedName); err != nil && !strings.Contains(err.Error(), "Struct must have") {
+		return err
+	} else if err == nil {
+		fieldValue := firstVal.FieldByName(fieldCreatedName)
+		cols += re.syntaxQuote + "created_at" + re.syntaxQuote + ","
+		val += "?,"
 		re.preparedValue = append(re.preparedValue, fieldValue.Interface())
 	}
 	cols = cols[:len(cols)-1]
@@ -190,9 +200,16 @@ func (re *Engine) PrepareMultiInsert(ctx context.Context, data interface{}) erro
 		for z := 0; z < tmpValNumField; z++ {
 			fieldType := tmpVal.Type().Field(z)
 			fieldValue := tmpVal.Field(z)
-			if _, valid := re.checkStructTag(fieldType.Tag, fieldValue); !valid {
+			if fieldType.Name == "CreatedAt" {
+				if err := re.setAutoUpdateCol(tmpVal, "CreatedAt"); err != nil && !strings.Contains(err.Error(), "Struct must have") {
+					log.Println("Error When Set Auto Update Col: " + err.Error())
+					continue
+				}
+			}
+			if _, valid := re.checkStructTag(fieldType.Tag, fieldValue, tmpVal); !valid {
 				continue
 			}
+
 			re.preparedValue = append(re.preparedValue, tmpVal.Field(z).Interface())
 		}
 	}
@@ -200,6 +217,7 @@ func (re *Engine) PrepareMultiInsert(ctx context.Context, data interface{}) erro
 	var err error
 	re.stmt, err = re.db.PreparexContext(ctx, re.rawQuery)
 	if err != nil {
+		log.Println("Error When Preparex Context: " + err.Error())
 		return errors.New(constants.ErrPrepareStatement + err.Error())
 	}
 	return nil
@@ -214,11 +232,19 @@ func (re *Engine) preparedData(command string, data interface{}) {
 	}
 	var valid bool
 	numField := sdValue.NumField()
+	colCommand := lib.SnakeToCamelCase(re.command + "_at")
 	for x := 0; x < numField; x++ {
 		col := ""
 		if col, valid = re.getAndValidateTag(sdValue, x); !valid {
 			continue
 		}
+		if sdValue.Type().Field(x).Name == colCommand {
+			if err := re.setAutoUpdateCol(sdValue, colCommand); err != nil && !strings.Contains(err.Error(), "Struct must have") {
+				log.Println("Error When Set AutoUpdateCol '"+colCommand+"': ", err.Error())
+				continue
+			}
+		}
+
 		if re.updatedCol != nil {
 			if _, exist := re.updatedCol[col]; !exist {
 				continue

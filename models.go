@@ -37,27 +37,28 @@ type (
 	}
 	// Operations - list of property query string
 	operations struct {
-		isRaw               bool
-		syntaxQuote         string
-		stmt                *sqlx.Stmt
+		isRaw                bool
+		syntaxQuote          string
+		stmt                 *sqlx.Stmt
 		includeDeletedColumn bool
-		isBulk              bool
-		isMultiRows         bool
-		bulkOptimized       bool
-		bulkCounter         int
-		updatedCol          map[string]bool
-		counter             int
-		rawQuery            string
-		column              string
-		orderBy             string
-		condition           string
-		preparedValue       []interface{}
-		multiPreparedValue  [][]interface{}
-		tableName           string
-		limit               string
-		join                string
-		groupBy             string
-		having              string
+		isBulk               bool
+		isMultiRows          bool
+		bulkOptimized        bool
+		bulkCounter          int
+		updatedCol           map[string]bool
+		counter              int
+		rawQuery             string
+		column               string
+		orderBy              string
+		condition            string
+		preparedValue        []interface{}
+		multiPreparedValue   [][]interface{}
+		tableName            string
+		command              string
+		limit                string
+		join                 string
+		groupBy              string
+		having               string
 	}
 )
 

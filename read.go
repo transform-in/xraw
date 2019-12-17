@@ -101,6 +101,15 @@ func (re *Engine) GroupBy(col ...string) XrawEngine {
 	return re
 }
 
+func (re *Engine) ID(value interface{}, opt ...string) XrawEngine {
+	if opt != nil {
+		re.generateCondition("id", value, opt[0], true)
+	} else {
+		re.generateCondition("id", value, "=", true)
+	}
+	return re
+}
+
 func (re *Engine) Where(col string, value interface{}, opt ...string) XrawEngine {
 	if opt != nil {
 		re.generateCondition(col, value, opt[0], true)

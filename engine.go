@@ -46,17 +46,32 @@ func (re *Engine) SetIsMultiRows(state bool) {
 // }
 
 // New - init new RORM Engine
-func New(cfg *DbConfig) (*Engine, error) {
+func New(cfg interface{}, dbDriver ...string) (*Engine, error) {
+	dbConf, isPtrDbConfig := cfg.(*DbConfig)
+	strConn, isStringConn := cfg.(string)
+	if !isPtrDbConfig && !isStringConn {
+		return nil, errors.New("Failed config setting, it must be *xraw.DbConfig or string connection")
+	}
 	var err error
 	re := &Engine{
-		config:  cfg,
 		options: &DbOptions{},
+		config:  &DbConfig{},
 	}
-	re.connectionString, err = generateConnectionString(cfg)
-	if err != nil {
-		return nil, err
+	if isPtrDbConfig {
+		re.config = dbConf
+		re.connectionString, err = generateConnectionString(dbConf)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		re.connectionString = strConn
+		if dbDriver == nil {
+			return nil, errors.New("You must set the dbDriver name, ex: mysql, postgres")
+		}
+		re.config.Driver = dbDriver[0]
 	}
-	if err := re.Connect(cfg.Driver, re.connectionString); err != nil {
+
+	if err := re.Connect(re.config.Driver, re.connectionString); err != nil {
 		log.Println("Cannot Connect to DB: ", err.Error())
 		return nil, err
 	}
@@ -64,7 +79,7 @@ func New(cfg *DbConfig) (*Engine, error) {
 	re.options.tbFormat = "snake"
 	re.options.colFormat = "snake"
 	re.syntaxQuote = "`"
-	if cfg.Driver != "mysql" {
+	if re.config.Driver != "mysql" {
 		re.syntaxQuote = "\""
 	}
 	return re, nil
@@ -211,14 +226,13 @@ func (re *Engine) clearField() {
 func (re *Engine) getAndValidateTag(field reflect.Value, keyIndex int) (string, bool) {
 
 	fieldType := field.Type().Field(keyIndex)
-	if fieldType.Type.Kind() == reflect.Ptr && field.Field(keyIndex).IsNil() {
+	fieldValue := field.Field(keyIndex)
+	if fieldType.Type.Kind() == reflect.Ptr && fieldValue.IsNil() {
 		return "", false
 	}
-	fieldValue := field.Field(keyIndex)
 	colNameTag := ""
 	var valid bool
-	if colNameTag, valid = re.checkStructTag(fieldType.Tag, fieldValue); !valid {
-
+	if colNameTag, valid = re.checkStructTag(fieldType.Tag, fieldValue, field); !valid {
 		return "", false
 	}
 	if colNameTag == "" {
@@ -231,16 +245,13 @@ func (re *Engine) getAndValidateTag(field reflect.Value, keyIndex int) (string, 
 	return colNameTag, true
 }
 
-func (re *Engine) checkStructTag(tagField reflect.StructTag, fieldVal reflect.Value) (string, bool) {
+func (re *Engine) checkStructTag(tagField reflect.StructTag, fieldVal, structObject reflect.Value) (string, bool) {
 	colName := ""
-	if tagField.Get("db") == "" {
-		return colName, true
-	}
 	colName = strings.Split(tagField.Get("db"), " ")[0]
 	identifierTagArr := strings.Split(tagField.Get("xraw"), " ")
 	for _, val := range identifierTagArr {
 		switch val {
-		case "pk", "ai":
+		case "pk", "ai", "created", "updated", "deleted":
 			return colName, false
 		case "date":
 			if fieldVal.String() == "" {
