@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/radityaapratamaa/xraw/lib"
 )
 
@@ -334,7 +335,7 @@ func (re *Engine) GenerateSelectQuery() {
 		if re.condition != "" {
 			// Convert the Condition Value into the prepared Statement Condition
 			re.convertToPreparedCondition()
-			re.condition += "AND "
+			re.condition += " AND "
 		}
 		re.condition += re.syntaxQuote + "deleted_at" + re.syntaxQuote + " IS " + nullQuery
 		re.rawQuery += re.condition
@@ -379,10 +380,22 @@ func (re *Engine) Get(pointerStruct interface{}) error {
 }
 
 func (re *Engine) ExecuteSelectQuery(ctx context.Context, pointerStruct interface{}, args ...interface{}) error {
-	if re.isMultiRows {
-		return re.db.SelectContext(ctx, pointerStruct, re.rawQuery, args...)
+	// if re.isMultiRows {
+	// 	return re.db.SelectContext(ctx, pointerStruct, re.rawQuery, args...)
+	// }
+	// return re.db.GetContext(ctx, pointerStruct, re.rawQuery, args...)
+	var err error
+	if re.stmt, err = re.db.PreparexContext(ctx, re.rawQuery); err != nil {
+		return errors.New("Error When Prepare Context: " + err.Error())
 	}
-	return re.db.GetContext(ctx, pointerStruct, re.rawQuery, args...)
+	if re.isMultiRows {
+		rows, err := re.stmt.QueryxContext(ctx, args...)
+		if err != nil {
+			return errors.New("Error When Execute the Prepare Statement: " + err.Error())
+		}
+		return re.scanToStruct(rows, pointerStruct)
+	}
+	return re.stmt.QueryRowxContext(ctx, args...).StructScan(pointerStruct)
 }
 
 func (re *Engine) scanToStructv2(rows *sql.Rows, model interface{}) error {
@@ -395,7 +408,7 @@ func (re *Engine) scanToStructv2(rows *sql.Rows, model interface{}) error {
 	return nil
 }
 
-func (re *Engine) scanToStruct(rows *sql.Rows, model interface{}) error {
+func (re *Engine) scanToStruct(rows *sqlx.Rows, model interface{}) error {
 	v := reflect.ValueOf(model)
 	if v.Kind() != reflect.Ptr {
 		return errors.New("must pass a pointer, not a value, to StructScan destination") // @todo add new error message
@@ -422,10 +435,12 @@ func (re *Engine) scanToStruct(rows *sql.Rows, model interface{}) error {
 		}
 
 		singleRes = make(map[string]interface{})
+		log.Printf("%#v", columns)
 		for i, colName := range columns {
-			var value interface{}
-			value = colName
-			val := reflect.TypeOf(value)
+			if colName == nil {
+				continue
+			}
+			val := reflect.TypeOf(colName)
 			switch val.Kind() {
 			case reflect.Int64, reflect.Int:
 				singleRes[cols[i]] = colName.(int64)
@@ -439,12 +454,6 @@ func (re *Engine) scanToStruct(rows *sql.Rows, model interface{}) error {
 
 	var willBeMarshall interface{}
 	willBeMarshall = multiRes
-	if len(multiRes) == 1 {
-		willBeMarshall = singleRes
-	} else if len(multiRes) == 0 {
-		model = nil
-		return nil
-	}
 	bJson, err := json.Marshal(willBeMarshall)
 	if err != nil {
 		return err
