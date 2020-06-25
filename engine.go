@@ -2,6 +2,7 @@ package xraw
 
 import (
 	"errors"
+	"github.com/transform-in/xraw/constants"
 	"log"
 	"net/url"
 	"reflect"
@@ -9,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/radityaapratamaa/xraw/lib"
+	"github.com/transform-in/xraw/lib"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -36,16 +37,8 @@ func (re *Engine) SetIsMultiRows(state bool) {
 	re.isMultiRows = state
 }
 
-// // New - init new RORM Engine
-// func New(dbDriver, connectionURL string, tbPrefix ...string) *Engine {
-// 	re := &Engine{}
-// 	if err := re.Connect(dbDriver, connectionURL, tbPrefix...); err != nil {
-// 		return nil
-// 	}
-// 	return re
-// }
 
-// New - init new RORM Engine
+// New - init new XRAW Engine
 func New(cfg *DbConfig) (*Engine, error) {
 	var err error
 	re := &Engine{
@@ -59,6 +52,16 @@ func New(cfg *DbConfig) (*Engine, error) {
 	if err := re.Connect(cfg.Driver, re.connectionString); err != nil {
 		log.Println("Cannot Connect to DB: ", err.Error())
 		return nil, err
+	}
+
+	re.db.SetMaxIdleConns(constants.DefaultMaxIdleConnection)
+	if re.config.MaxIdleConnection != 0 {
+		re.db.SetMaxIdleConns(re.config.MaxIdleConnection)
+	}
+
+	re.db.SetMaxOpenConns(constants.DefaultMaxOpenConnection)
+	if re.config.MaxDBConnection != 0 {
+		re.db.SetMaxOpenConns(re.config.MaxDBConnection)
 	}
 	// set default for table case format
 	re.options.tbFormat = "snake"
@@ -184,6 +187,7 @@ func (re *Engine) extractTableName(data interface{}) reflect.Value {
 func (re *Engine) Connect(dbDriver, connectionURL string) error {
 	var err error
 	re.db, err = sqlx.Open(dbDriver, connectionURL)
+
 	return err
 }
 

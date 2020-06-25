@@ -96,13 +96,13 @@ Reports:
 
 # Installation
 ```go
-go get github.com/radityaapratamaa/xraw
+go get github.com/transform-in/xraw
 ```
 
 import to your project
 
 ```go
-import "github.com/radityaapratamaa/xraw"
+import "github.com/transform-in/xraw"
 ```
 # Features
 | Feature       | Using                                               | Description                                                                                                      |

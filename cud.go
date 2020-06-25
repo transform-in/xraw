@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/radityaapratamaa/xraw/constants"
-	"github.com/radityaapratamaa/xraw/lib"
+	"github.com/transform-in/xraw/constants"
+	"github.com/transform-in/xraw/lib"
 )
 
 func (re *Engine) Insert(data interface{}) (int64, error) {
