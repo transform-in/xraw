@@ -1,6 +1,7 @@
 package xraw
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -11,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/radityaapratamaa/xraw/lib"
+	"github.com/transform-in/xraw/lib"
 )
 
 func (re *Engine) GetResults() []map[string]string {
@@ -304,46 +305,48 @@ func (re *Engine) Limit(limit int, offset ...int) XrawEngine {
 
 // GenerateSelectQuery - Generate Select Query
 func (re *Engine) GenerateSelectQuery() {
-
+	var queryBuilder bytes.Buffer
 	if !re.isRaw {
+		queryBuilder.Reset()
 		//===== Generated Query Start =====
+		queryBuilder.WriteString("SELECT ")
 		re.rawQuery = "SELECT "
 		if re.column == "" {
-			re.rawQuery += "*"
+			queryBuilder.WriteString("*")
 		} else {
-			re.rawQuery += re.column
+			queryBuilder.WriteString(re.column)
 		}
-		re.rawQuery += " FROM "
-		re.rawQuery += re.syntaxQuote + re.tableName + re.syntaxQuote
+
+		concatStr := " FROM " + re.syntaxQuote + re.tableName + re.syntaxQuote
+		queryBuilder.WriteString(concatStr)
 
 		nullQuery := "NULL"
 		if re.includeDeletedColumn {
 			nullQuery = "NOT NULL"
 		}
 
-		re.rawQuery += " WHERE "
+		queryBuilder.WriteString(" WHERE ")
+
 		if re.condition != "" {
 			// Convert the Condition Value into the prepared Statement Condition
 			re.convertToPreparedCondition()
 			re.condition += "AND "
 		}
 		re.condition += re.syntaxQuote + "deleted_at" + re.syntaxQuote + " IS " + nullQuery
-		re.rawQuery += re.condition
+		queryBuilder.WriteString(re.condition)
 
 		if re.groupBy != "" {
-			re.rawQuery += " GROUP BY "
-			re.rawQuery += re.groupBy
+			queryBuilder.WriteString(" GROUP BY " + re.groupBy)
 		}
 
 		if re.orderBy != "" {
-			re.rawQuery += " ORDER BY "
-			re.rawQuery += re.orderBy
+			queryBuilder.WriteString(" ORDER BY " + re.orderBy)
 		}
 
 		if re.limit != "" {
-			re.rawQuery += " LIMIT "
-			re.rawQuery += re.limit
+			queryBuilder.WriteString(" LIMIT " + re.limit)
 		}
+		re.rawQuery = queryBuilder.String()
 	}
 	re.rawQuery = re.db.Rebind(re.rawQuery)
 }

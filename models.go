@@ -27,6 +27,10 @@ type (
 		Options  string
 		// DbInstance - for SQL Server
 		DbInstance string
+
+		// Optional config
+		MaxIdleConnection int
+		MaxDBConnection int
 	}
 	// DbOptions - options for DB structure
 	DbOptions struct {
