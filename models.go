@@ -1,6 +1,8 @@
 package xraw
 
-import "github.com/jmoiron/sqlx"
+import (
+	"github.com/jmoiron/sqlx"
+)
 
 type (
 	// Engine - Raw Query ORM Engine structure
@@ -12,6 +14,7 @@ type (
 		results          []map[string]string
 		connectionString string
 		operations
+		workers
 	}
 
 	// DbConfig - DB Connection struct
@@ -30,7 +33,8 @@ type (
 
 		// Optional config
 		MaxIdleConnection int
-		MaxDBConnection int
+		MaxDBConnection   int
+		TotalWorker int
 	}
 	// DbOptions - options for DB structure
 	DbOptions struct {
@@ -41,27 +45,31 @@ type (
 	}
 	// Operations - list of property query string
 	operations struct {
-		isRaw               bool
-		syntaxQuote         string
-		stmt                *sqlx.Stmt
+		isRaw                bool
+		syntaxQuote          string
+		stmt                 *sqlx.Stmt
 		includeDeletedColumn bool
-		isBulk              bool
-		isMultiRows         bool
-		bulkOptimized       bool
-		bulkCounter         int
-		updatedCol          map[string]bool
-		counter             int
-		rawQuery            string
-		column              string
-		orderBy             string
-		condition           string
-		preparedValue       []interface{}
-		multiPreparedValue  [][]interface{}
-		tableName           string
-		limit               string
-		join                string
-		groupBy             string
-		having              string
+		isBulk               bool
+		isMultiRows          bool
+		bulkOptimized        bool
+		bulkCounter          int
+		updatedCol           map[string]bool
+		counter              int
+		rawQuery             string
+		column               string
+		orderBy              string
+		condition            string
+		preparedValue        []interface{}
+		multiPreparedValue   [][]interface{}
+		tableName            string
+		limit                string
+		join                 string
+		groupBy              string
+		having               string
+	}
+
+	workers struct {
+		total int
 	}
 )
 

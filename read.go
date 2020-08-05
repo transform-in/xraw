@@ -547,5 +547,4 @@ func (re *Engine) convertToPreparedCondition() {
 		val = strings.Replace(val, "'", "", -1)
 		re.preparedValue = append(re.preparedValue, val)
 	}
-
 }

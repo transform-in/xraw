@@ -37,10 +37,12 @@ func (re *Engine) SetIsMultiRows(state bool) {
 	re.isMultiRows = state
 }
 
-
 // New - init new XRAW Engine
 func New(cfg *DbConfig) (*Engine, error) {
 	var err error
+	if cfg.TotalWorker == 0 {
+		cfg.TotalWorker = 1
+	}
 	re := &Engine{
 		config:  cfg,
 		options: &DbOptions{},
