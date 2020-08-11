@@ -2,6 +2,7 @@ package xraw
 
 import (
 	"errors"
+	"github.com/jmoiron/sqlx/reflectx"
 	"github.com/transform-in/xraw/constants"
 	"log"
 	"net/url"
@@ -37,10 +38,12 @@ func (re *Engine) SetIsMultiRows(state bool) {
 	re.isMultiRows = state
 }
 
-
 // New - init new XRAW Engine
 func New(cfg *DbConfig) (*Engine, error) {
 	var err error
+	if cfg.TotalWorker == 0 {
+		cfg.TotalWorker = 1
+	}
 	re := &Engine{
 		config:  cfg,
 		options: &DbOptions{},
@@ -70,6 +73,8 @@ func New(cfg *DbConfig) (*Engine, error) {
 	if cfg.Driver != "mysql" {
 		re.syntaxQuote = "\""
 	}
+
+	re.db.Mapper = reflectx.NewMapper("xraw")
 	return re, nil
 }
 
@@ -134,9 +139,6 @@ func generateConnectionString(cfg *DbConfig) (connectionString string, err error
 func (re *Engine) extractTableName(data interface{}) reflect.Value {
 	dValue := reflect.ValueOf(data).Elem()
 
-	if re.tableName != "" {
-		return dValue
-	}
 	sdValue := dValue
 	if dValue.Kind() == reflect.Slice {
 		re.isMultiRows = true
@@ -161,6 +163,9 @@ func (re *Engine) extractTableName(data interface{}) reflect.Value {
 			}
 			re.multiPreparedValue = append(re.multiPreparedValue, re.preparedValue)
 		}
+	}
+	if re.tableName != "" {
+		return dValue
 	}
 	tblName := ""
 	switch sdValue.Kind() {
