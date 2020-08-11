@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/transform-in/xraw/lib"
 )
@@ -351,6 +352,11 @@ func (re *Engine) GenerateSelectQuery() {
 	re.rawQuery = re.db.Rebind(re.rawQuery)
 }
 
+func (re *Engine) Context(ctx context.Context) XrawEngine {
+	re.ctx = ctx
+	return re
+}
+
 // Get - Execute the Raw Query and get Multi Rows Result
 func (re *Engine) Get(pointerStruct interface{}) error {
 	defer re.clearField()
@@ -361,15 +367,44 @@ func (re *Engine) Get(pointerStruct interface{}) error {
 	}
 	// ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	// defer cancel()
-	ctx := context.Background()
 	// if re.tableName, err = lib.GetStructName(pointerStruct); err != nil {
 	// 	return err
 	// }
 	re.extractTableName(pointerStruct)
 
 	re.GenerateSelectQuery()
-	prepareVal := re.preparedValue
-	return re.ExecuteSelectQuery(ctx, pointerStruct, prepareVal...)
+	//prepareVal := re.preparedValue
+	//return re.ExecuteSelectQuery(ctx, pointerStruct, prepareVal...)
+	return re.getWithWorker(pointerStruct)
+}
+
+func (re *Engine) getWithWorker(model interface{}) error {
+	if re.ctx == nil {
+		re.ctx = context.Background()
+	}
+	stmt, err := re.db.PreparexContext(re.ctx, re.rawQuery)
+	if err != nil {
+		return err
+	}
+
+	//var rows *sqlx.Rows
+	if re.isMultiRows {
+		rows, err := stmt.QueryxContext(re.ctx, re.preparedValue...)
+		if err != nil {
+			return err
+		}
+		workerDt := &selectWorker{
+			rows:   rows,
+			wg:     new(sync.WaitGroup),
+			result: model,
+		}
+
+		go re.executeWorker(workerDt)
+		re.scanData(workerDt)
+
+		log.Printf("%#v", re.result)
+	}
+	return nil
 }
 
 func (re *Engine) ExecuteSelectQuery(ctx context.Context, pointerStruct interface{}, args ...interface{}) error {

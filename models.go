@@ -1,6 +1,7 @@
 package xraw
 
 import (
+	"context"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -34,7 +35,7 @@ type (
 		// Optional config
 		MaxIdleConnection int
 		MaxDBConnection   int
-		TotalWorker int
+		TotalWorker       int
 	}
 	// DbOptions - options for DB structure
 	DbOptions struct {
@@ -66,6 +67,7 @@ type (
 		join                 string
 		groupBy              string
 		having               string
+		ctx                  context.Context
 	}
 
 	workers struct {
