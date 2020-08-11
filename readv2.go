@@ -15,10 +15,11 @@ type selectWorker struct {
 }
 
 func (xe *Engine) scanData(dt *selectWorker) {
+	dt.data = make(chan []interface{}, 0)
 	for dt.rows.Next() {
 		var tmpData []interface{}
 		dt.rows.Scan(tmpData...)
-		dt.wg.Add(1)
+
 		dt.data <- tmpData
 	}
 	close(dt.data)
@@ -61,5 +62,4 @@ func (xe *Engine) executeWorker(dt *selectWorker) {
 	}
 	multipleResult <- multiResult
 	close(multipleResult)
-
 }

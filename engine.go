@@ -42,7 +42,7 @@ func (re *Engine) SetIsMultiRows(state bool) {
 func New(cfg *DbConfig) (*Engine, error) {
 	var err error
 	if cfg.TotalWorker == 0 {
-		cfg.TotalWorker = 1
+		cfg.TotalWorker = 5
 	}
 	re := &Engine{
 		config:  cfg,
